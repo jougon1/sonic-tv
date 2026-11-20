@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sonic TV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Bungee&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wall: #17110d; --wall2: #241a13; --panel: #2a211b; --line: #4a3a2e; --text: #f3e9dc; --muted: #b59f8a;
+    --orange: #ff9a3c; --teal: #3fd0c9; --red: #ff5a4f; --yellow: #ffd166; --phosphor: #8dff7a;
+    --wood1: #6b4226; --wood2: #4a2c17; --plastic: #1b1b1b;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(ellipse at 50% -10%, #3b2a1d 0%, var(--wall) 60%) fixed, var(--wall);
+    min-height: 100vh;
+  }
+  .vt { font-family: VT323, "Courier New", monospace; }
+  header { max-width: 1100px; margin: 0 auto; padding: 20px 16px 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; justify-content: space-between; }
+  .logo { font-family: Bungee, Impact, sans-serif; font-size: 34px; line-height: 1; letter-spacing: 1px; margin: 0; }
+  .logo span { color: var(--orange); }
+  .stripes { height: 6px; width: 150px; margin-top: 6px; background: linear-gradient(90deg, #ffd166 0 25%, #ff9a3c 25% 50%, #ff5a4f 50% 75%, #3fd0c9 75%); border-radius: 3px; }
+  .tagline { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .channels { display: flex; gap: 8px; }
+  .ch {
+    font-family: VT323, monospace; font-size: 22px; letter-spacing: 1px; cursor: pointer; color: #cbb8a4;
+    background: linear-gradient(#3a2f27, #231b15); border: 1px solid #5a4636; border-bottom-width: 4px; border-radius: 8px; padding: 6px 16px;
+  }
+  .ch.on { color: #1b120b; background: linear-gradient(#ffb766, var(--orange)); border-color: #c46a1d; }
+  main { max-width: 1100px; margin: 0 auto; padding: 10px 16px 50px; }
+  section { display: none; }
+  section.on { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 22px; align-items: start; }
+  @media (max-width: 860px) { section.on { grid-template-columns: 1fr; } section.on > div:last-child { order: -1; } }
+  .card { background: linear-gradient(#2c231c, #221a15); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card + .card { margin-top: 14px; }
+  .card h3 { margin: 0 0 10px; font-family: VT323, monospace; font-weight: normal; font-size: 22px; color: var(--yellow); letter-spacing: .5px; }
+
+  /* ---------- the TV set ---------- */
+  .tv { width: 100%; max-width: 640px; margin: 0 auto; }
+  .tv-body {
+    display: flex; gap: 14px; padding: 18px; border-radius: 26px;
+    background:
+      repeating-linear-gradient(92deg, rgba(0,0,0,.08) 0 2px, transparent 2px 9px),
+      repeating-linear-gradient(88deg, rgba(255,255,255,.035) 0 1px, transparent 1px 13px),
+      linear-gradient(160deg, var(--wood1), var(--wood2));
+    box-shadow: 0 18px 40px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.12), inset 0 -4px 0 rgba(0,0,0,.35);
+  }
+  .bezel { flex: 1; min-width: 0; padding: 14px; border-radius: 22px; background: linear-gradient(145deg, #2a2a2a, #0e0e0e); box-shadow: inset 0 0 0 2px #3a3a3a, inset 0 6px 14px rgba(0,0,0,.8); }
+  .screen {
+    position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: #050605;
+    border-radius: 18% / 16%; box-shadow: 0 0 0 3px #000, 0 0 22px rgba(141,255,122,.07);
+    transform-origin: 50% 50%;
+  }
+  .screen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .screen canvas.pic { object-fit: contain; filter: blur(.45px) contrast(1.12) saturate(1.3) brightness(1.06); }
+  .screen canvas.snow { opacity: 0; transition: opacity .35s; image-rendering: pixelated; filter: contrast(1.3); }
+  .screen.snowy canvas.snow { opacity: .92; }
+  .screen .beam { position: absolute; left: 0; right: 0; height: 3px; top: 0; display: none; background: rgba(255,255,255,.85); box-shadow: 0 0 10px 3px rgba(190,255,230,.55); mix-blend-mode: screen; }
+  .screen.scanning .beam { display: block; }
+  .screen .glass {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      repeating-linear-gradient(to bottom, rgba(0,0,0,.30) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(90deg, rgba(255,0,0,.035) 0 1px, rgba(0,255,0,.035) 1px 2px, rgba(0,0,255,.035) 2px 3px),
+      radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.7) 100%);
+    animation: flicker .12s infinite steps(2);
+  }
+  .screen .glass::after { content: ""; position: absolute; inset: 0; background: linear-gradient(130deg, rgba(255,255,255,.10) 0%, transparent 32%, transparent 70%, rgba(255,255,255,.03) 100%); border-radius: inherit; }
+  @keyframes flicker { 0% { opacity: .96; } 100% { opacity: 1; } }
+  .screen.off canvas, .screen.off .osd { visibility: hidden; }
+  .screen.poweron { animation: poweron .55s ease-out; }
+  @keyframes poweron { 0% { transform: scale(1, .004); filter: brightness(6); } 45% { transform: scale(1, .02); filter: brightness(4); } 100% { transform: scale(1, 1); filter: brightness(1); } }
+  .osd { position: absolute; inset: 7% 9%; font-family: VT323, monospace; color: var(--phosphor); text-shadow: 0 0 6px rgba(141,255,122,.8), 2px 2px 0 #000; font-size: clamp(14px, 3.4vw, 24px); line-height: 1.1; pointer-events: none; }
+  .osd > div { position: absolute; white-space: nowrap; }
+  .osd .tl { top: 0; left: 0; } .osd .tr { top: 0; right: 0; } .osd .bl { bottom: 0; left: 0; } .osd .br { bottom: 0; right: 0; }
+  .osd .c { top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5em; text-align: center; }
+  .osd .blink { animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .osd .bar { position: absolute; left: 0; right: 0; bottom: -2px; height: 6px; border: 1px solid var(--phosphor); display: none; }
+  .osd .bar i { display: block; height: 100%; width: 0; background: var(--phosphor); box-shadow: 0 0 6px var(--phosphor); }
+  .side { width: 92px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 6px 0; border-radius: 14px; background: linear-gradient(#1f1f1f, #121212); box-shadow: inset 0 0 0 1px #333; }
+  .side .brand { font-family: Bungee, sans-serif; font-size: 11px; color: #c9b38f; letter-spacing: 1px; margin-top: 4px; }
+  .knob { width: 52px; height: 52px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #777, #2a2a2a 60%, #111); box-shadow: 0 3px 6px rgba(0,0,0,.7), inset 0 0 0 3px #1a1a1a; position: relative; }
+  .knob::after { content: ""; position: absolute; left: 50%; top: 6px; width: 3px; height: 14px; margin-left: -1.5px; background: #e9d8b5; border-radius: 2px; }
+  .knob.small { width: 38px; height: 38px; }
+  .knob.small::after { top: 4px; height: 10px; }
+  .knob.k1 { transform: rotate(-35deg); } .knob.k2 { transform: rotate(50deg); }
+  .grille { width: 64px; flex: 1; min-height: 60px; border-radius: 8px; background: repeating-linear-gradient(0deg, #0b0b0b 0 3px, #2b2b2b 3px 5px); }
+  .led { width: 10px; height: 10px; border-radius: 50%; background: #401010; margin-bottom: 6px; box-shadow: inset 0 1px 2px rgba(0,0,0,.6); }
+  .led.on { background: #ff3b30; box-shadow: 0 0 8px 2px rgba(255,59,48,.8); }
+  .led.live { background: #49ff6b; box-shadow: 0 0 8px 2px rgba(73,255,107,.8); animation: blink 1s steps(2) infinite; }
+  .legs { display: flex; justify-content: space-between; padding: 0 70px; }
+  .legs i { width: 14px; height: 22px; background: linear-gradient(#3a2414, #1c120a); border-radius: 0 0 4px 4px; transform: skewX(-10deg); }
+  .legs i:last-child { transform: skewX(10deg); }
+  @media (max-width: 560px) { .side { display: none; } .tv-body { padding: 12px; } .bezel { padding: 9px; } }
+
+  /* ---------- controls ---------- */
+  .btn {
+    font-family: VT323, monospace; font-size: 22px; line-height: 1; letter-spacing: .5px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    color: #1b120b; background: linear-gradient(#ffc078, var(--orange)); border: 1px solid #b85f14; border-bottom-width: 4px; border-radius: 9px; padding: 9px 16px;
+  }
+  .btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+  .btn.alt { color: var(--text); background: linear-gradient(#4a3c31, #2f251e); border-color: #66513f; }
+  .btn.red { color: #fff; background: linear-gradient(#ff7a6e, var(--red)); border-color: #a3271e; }
+  .btn.teal { color: #071917; background: linear-gradient(#7ae8e2, var(--teal)); border-color: #1f8a85; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 12px 0; }
+  label.drop { display: block; border: 2px dashed #6b5442; border-radius: 12px; padding: 22px 14px; text-align: center; cursor: pointer; color: var(--muted); background: rgba(0,0,0,.15); }
+  label.drop:hover { border-color: var(--orange); color: var(--text); }
+  label.drop b { display: block; font-family: VT323, monospace; font-size: 24px; color: var(--text); font-weight: normal; }
+  input[type=file] { display: none; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+  .seg button { text-align: left; cursor: pointer; color: var(--text); background: rgba(0,0,0,.2); border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+  .seg button b { display: block; font-family: VT323, monospace; font-size: 22px; font-weight: normal; }
+  .seg button span { color: var(--muted); font-size: 12.5px; }
+  .seg button.on { border-color: var(--orange); background: rgba(255,154,60,.12); }
+  .seg button:disabled { opacity: .35; cursor: default; }
+  .ctl { margin: 10px 0; font-size: 14px; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--orange); }
+  select { width: 100%; margin-top: 4px; padding: 7px 8px; font-size: 14px; color: var(--text); background: #18120e; border: 1px solid var(--line); border-radius: 7px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; font-size: 14px; margin: 10px 0 0; }
+  .kv b { color: var(--muted); font-weight: 500; }
+  audio { width: 100%; margin: 6px 0; }
+  .tip { margin-top: 14px; font-size: 13px; color: #d9c7b2; background: rgba(63,208,201,.08); border: 1px solid rgba(63,208,201,.3); border-radius: 10px; padding: 10px 12px; }
+  .meter { height: 12px; border-radius: 3px; overflow: hidden; background: #0c0a08; border: 1px solid #3a2d23; }
+  .meter > div { height: 100%; width: 0; background: repeating-linear-gradient(90deg, var(--phosphor) 0 6px, transparent 6px 8px); transition: width .08s; }
+  canvas#spec { width: 100%; height: 90px; display: block; border-radius: 8px; background: #050805; border: 1px solid #23311f; }
+  .status { font-family: VT323, monospace; font-size: 24px; color: var(--phosphor); text-shadow: 0 0 6px rgba(141,255,122,.6); margin: 4px 0 8px; min-height: 28px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 3px; margin: 10px 0; }
+  .grid i { width: 11px; height: 11px; border-radius: 2px; background: #3a2f27; display: block; }
+  .grid i.ok { background: var(--phosphor); }
+  .grid i.meta { outline: 1px solid var(--teal); }
+  .log { font: 13px/1.45 VT323, Consolas, monospace; background: #070906; color: #79b56d; border: 1px solid #23311f; border-radius: 8px; padding: 8px 10px; height: 140px; overflow: auto; }
+  .log .ok { color: var(--phosphor); } .log .bad { color: var(--red); } .log .info { color: var(--teal); }
+  details summary { cursor: pointer; color: var(--yellow); font-family: VT323, monospace; font-size: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 class="logo">SONIC<span>·</span>TV</h1>
+    <div class="stripes"></div>
+    <div class="tagline">Pictures and files sent as sound, painted live like a 90s TV.</div>
+  </div>
+  <nav class="channels">
+    <button class="ch on" data-tab="send">CH1 ▸ TRANSMIT</button>
+    <button class="ch" data-tab="recv">CH2 ▸ RECEIVE</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ================= TRANSMIT ================= -->
+  <section id="send" class="on">
+    <div>
+      <div class="card">
+        <h3>1 · PICK SOMETHING</h3>
+        <label class="drop" id="drop">
+          <input type="file" id="file">
+          <b>📼 Choose a picture or file</b>
+          or drop it here
+        </label>
+        <div class="seg" id="kind">
+          <button data-kind="tv" class="on"><b>📺 TV picture</b><span>Painted live, line by line. Retro look, 36–90 s.</span></button>
+          <button data-kind="data"><b>💾 Exact file</b><span>Any file, perfect copy, checksum-verified.</span></button>
+        </div>
+
+        <div id="tvOpts">
+          <div class="ctl">Broadcast mode
+            <select id="tvMode">
+              <option value="robot36">Robot 36 – 320×240, 36 seconds</option>
+              <option value="pd90">PD 90 – 320×256, 90 seconds, cleaner colour</option>
+            </select>
+          </div>
+          <div class="ctl">Framing
+            <select id="tvFit">
+              <option value="cover">Fill the screen (crop edges)</option>
+              <option value="contain">Show the whole picture (black bars)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="dataOpts" hidden>
+          <div class="ctl">Sound mode
+            <select id="mode">
+              <option value="fast">Fast – about 105 bytes/s</option>
+              <option value="robust">Robust – about 60 bytes/s (noisy room, farther away)</option>
+            </select>
+          </div>
+          <div id="imgOpts" hidden>
+            <div class="ctl">Image format
+              <select id="fmt">
+                <option value="image/webp">WebP – sharpest for its size</option>
+                <option value="image/jpeg">JPEG</option>
+                <option value="original">Original file, untouched (slow)</option>
+              </select>
+            </div>
+            <div id="fitBox">
+              <div class="ctl">Transfer time: <b id="secsV"></b>
+                <input type="range" id="secs" min="15" max="600" step="5" value="60">
+                <div class="muted">Longer sound = sharper picture. Best resolution and quality are picked for you.</div>
+              </div>
+              <div class="ctl"><label><input type="checkbox" id="manual"> Set resolution and quality myself</label></div>
+            </div>
+            <div id="manualBox" hidden>
+              <div class="ctl">Max size: <b id="dimV"></b> px<input type="range" id="dim" min="64" max="2048" step="16" value="512"></div>
+              <div class="ctl">Quality: <b id="qV"></b><input type="range" id="q" min="0.1" max="0.95" step="0.05" value="0.6"></div>
+            </div>
+          </div>
+        </div>
+        <div class="kv" id="sendInfo"></div>
+      </div>
+
+      <div class="card">
+        <h3>2 · GO ON AIR</h3>
+        <div class="actions">
+          <button class="btn" id="gen" disabled>⚡ Make the sound</button>
+          <label class="muted"><input type="checkbox" id="loop"> loop</label>
+        </div>
+        <div id="out" hidden>
+          <audio id="player" controls></audio>
+          <div class="actions">
+            <a class="btn alt" id="dl" download>⬇ Save .wav</a>
+            <span class="muted" id="wavInfo"></span>
+          </div>
+        </div>
+        <div class="tip">
+          Press play next to the laptop, or save the .wav and send it to your phone <b>as a file</b> (not a voice note).
+          Volume up, hold the phone 10–30 cm from the laptop mic. You can also open this page on your phone and play from here.
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="tv" id="txTv"></div>
+    </div>
+  </section>
+
+  <!-- ================= RECEIVE ================= -->
+  <section id="recv">
+    <div>
+      <div class="card">
+        <h3>TUNER</h3>
+        <div class="actions">
+          <button class="btn teal" id="listen">⏻ Turn on &amp; listen</button>
+          <button class="btn alt" id="reset">↺ Reset</button>
+        </div>
+        <div class="status" id="rxStatus">TV is off</div>
+        <div class="muted">Signal</div>
+        <div class="meter"><div id="lvl"></div></div>
+        <div class="muted" style="margin-top:10px">Spectrum</div>
+        <canvas id="spec" width="600" height="90"></canvas>
+        <div class="actions">
+          <a class="btn" id="rxDl" hidden download>📸 Save picture</a>
+          <label class="btn alt" style="cursor:pointer">📂 Play a sound file<input type="file" id="audioFile" accept="audio/*,.wav"></label>
+        </div>
+      </div>
+      <div class="card">
+        <details id="dataBox">
+          <summary>DATA CONSOLE</summary>
+          <div class="kv" id="rxInfo"></div>
+          <div class="grid" id="grid"></div>
+          <div class="log" id="log"></div>
+        </details>
+      </div>
+    </div>
+    <div>
+      <div class="tv" id="rxTv"></div>
+    </div>
+  </section>
+</main>
+
+<template id="tvTpl">
+  <div class="tv-body">
+    <div class="bezel">
+      <div class="screen off">
+        <canvas class="pic" width="320" height="240"></canvas>
+        <canvas class="snow" width="160" height="120"></canvas>
+        <div class="beam"></div>
+        <div class="osd"><div class="tl"></div><div class="tr"></div><div class="c"></div><div class="bl"></div><div class="br"></div><div class="bar"><i></i></div></div>
+        <div class="glass"></div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="brand">SONIC</div>
+      <div class="knob k1"></div>
+      <div class="knob small k2"></div>
+      <div class="grille"></div>
+      <div class="led"></div>
+    </div>
+  </div>
+  <div class="legs"><i></i><i></i></div>
+</template>
+
+<script src="modem.js"></script>
+<script src="sstv.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
